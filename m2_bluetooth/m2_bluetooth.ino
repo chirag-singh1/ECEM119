@@ -43,7 +43,8 @@ void setup() {
   // start advertising
   BLE.advertise();
 
-  Serial.println("BLE LED Peripheral");
+  Serial.print("BLE LED Peripheral: ");
+  Serial.println(ledService.uuid());
 }
 
 void loop() {
