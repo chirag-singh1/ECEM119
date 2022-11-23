@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+</head>
+
+<body>
+
+</body>
+
+<canvas id="gamescreen" style="background-color:black;" width="450" height="450">
+</canvas>
+<div id="scoreBoard">
+	Score: <span id="score1">0</span>-<span id="score2">0</span>
+</div>
+
+<script type="application/javascript">
+
+	const SERVERADDRESS = "http://localhost:3000"
+
+	// Pong Game
+	// Where: https://github.com/pwdonald/pong
+	// Why: Uses pong codebase with my controls code
+	// Author: Donald Jones <donald@birminghamdeveloper.com>
+
+
+	var FPS = 60;
+	var engine = {};
+	var canvas = document.getElementById('gamescreen');
+	var ctx = canvas.getContext('2d');
+	var STOPPED = true;
+	var gameloop;
+
+	var Player = {
+		score: [0, 0]
+	};
+
+	var ball = {
+		startSize: 8,
+		minSize: 2,
+		r: 8,
+		x: (canvas.width / 2),
+		y: (canvas.height / 2),
+		vx: Math.random() * 20 + -1,
+		vy: Math.random() * 20 + -1,
+		center: {
+			x: function () {
+				return ball.x + ball.r;
+			},
+			y: function () {
+				return ball.y + ball.r;
+			}
+		}
+	};
+
+	var paddle1 = {
+		w: 10,
+		h: 50,
+		x: 1,
+		y: 0
+	};
+
+	var paddle2 = {
+		w: 10,
+		h: 50,
+		x: canvas.width - 10 - 1,
+		y: 0,
+	}
+
+	var dy1 = 0;
+	var dy2 = 0;
+	var gyro = 0;
+
+	engine.drawPaddle = function (paddle) {
+		if (paddle.y > canvas.height - paddle.h) {
+			paddle.y = canvas.height - paddle.h;
+		} else if (paddle.y < 0) {
+			paddle.y = 0;
+		}
+
+		ctx.beginPath();
+		ctx.fillStyle = "white";
+		ctx.rect(paddle.x, paddle.y, paddle.w, paddle.h);
+		ctx.closePath();
+		ctx.fill();
+	};
+
+	engine.drawBall = function () {
+		ball.x = ball.x + ball.vx;
+		ball.y = ball.y + ball.vy;
+		if (ball.x < 0) {
+			engine.endGame(true);
+			return;
+		}
+		if (ball.x > canvas.width) {
+			engine.endGame(false);
+			return;
+		}
+		if (ball.y > canvas.height - ball.r || ball.y < 0 + ball.r) {
+			ball.vy = -1 * ball.vy;
+		}
+		ctx.beginPath();
+		ctx.fillStyle = "white";
+		ctx.arc(ball.x, ball.y, ball.r * 2, 0, Math.PI * 2, true);
+		ctx.closePath();
+		ctx.fill();
+	};
+
+	engine.checkCollision = function (paddle, ball) {
+		var paddleCenter = {
+			x: (paddle.x + paddle.w) / 2,
+			y: (paddle.y + paddle.h) / 2
+		};``
+		if (ball.x - ball.r <= (paddle.w + paddle.x)) {
+			if ((ball.y + ball.r + ball.r <= paddle.y + paddle.h || ball.y <= paddle.y + paddle.h) && (ball.y + ball.r + ball.r >= paddle.y || ball.y >= paddle.y)) {
+				ball.vx = -1 * ball.vx;
+				if (ball.y < paddleCenter.y) {
+					ball.vy = -1 * ball.vy;
+				}
+				ball.vx += 1;
+				ball.vy += 1;
+			}
+		}
+	};
+
+	engine.checkComputer = function (paddle, ball) {
+		var paddleCenter = {
+			x: (paddle.x + paddle.w) / 2,
+			y: (paddle.y + paddle.h) / 2
+		};``
+		if (ball.x + ball.r >= paddle.x && ball.vx >= 0) {
+			if ((ball.y + ball.r + ball.r <= paddle.y + paddle.h || ball.y <= paddle.y + paddle.h) && (ball.y + ball.r + ball.r >= paddle.y || ball.y >= paddle.y)) {
+				ball.vx = -1 * ball.vx;
+				if (ball.y < paddleCenter.y) {
+					ball.vy = -1 * ball.vy;
+				}
+				ball.vx -= 1;
+				ball.vy += 1;
+			}
+		}
+	}
+
+	engine.renderScore = function () {
+		var scoreBoard = document.getElementById('score1');
+		scoreBoard.innerHTML = Player.score[0];
+		scoreBoard = document.getElementById('score2');
+		scoreBoard.innerHTML = Player.score[1];
+	};
+
+	engine.startGame = function () {
+		STOPPED = false;
+		ball.x = (canvas.width / 2);
+		ball.y = (canvas.width / 2);
+		ball.vx = Math.random() * 3 + 1;
+		ball.vy = Math.random() * 3 + 1;
+		ball.r = ball.startSize;
+		gameloop = setInterval(function () {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			engine.drawBall();
+			engine.drawPaddle(paddle1);
+			engine.drawPaddle(paddle2);
+			engine.checkCollision(paddle1, ball);
+			engine.checkComputer(paddle2, ball);
+			engine.renderScore();
+			paddle1.y  += dy1;
+			paddle2.y += dy2;
+		}, 1000 / FPS);
+	};
+
+	engine.endGame = function (player1Lost) {
+		STOPPED = true;
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		clearInterval(gameloop);
+		ctx.font = "20px Arial";
+		if (player1Lost) {
+			Player.score[1] += 1;
+		}
+		else {
+			Player.score[0] += 1;
+		}
+		ctx.fillText("Press Enter to continue", canvas.width / 2 - 95, canvas.height / 2 + 25);
+	};
+
+	engine.mousePosition = function (evt) {
+		var gameBounds = canvas.getBoundingClientRect();
+		paddle1.y = evt.clientY - gameBounds.top;
+	};
+
+	ctx.font = "20px Arial";
+	ctx.fillStyle = 'white';
+	ctx.fillText("Press Enter to Begin!", canvas.width / 2 - 95, canvas.height / 2);
+
+	window.addEventListener('keydown', function (e) {
+		if (e.keyCode === 27) {
+			engine.endGame();
+		} else if (e.keyCode === 13 && STOPPED) {
+			engine.startGame();
+
+			dy1 = 0;
+			dy2 = 0;
+			gyro = 0;
+		}
+		else if (e.keyCode == 87) {
+			dy1 = -10.0;
+		}
+		else if (e.keyCode == 83) {
+			dy1  = 10.0;
+		}
+		else if (e.keyCode == 38) {
+			dy2 = -10.0;
+		}
+		else if (e.keyCode == 40) {
+			dy2  = 10.0;
+		}
+	});
+
+	window.addEventListener('keyup', function(e) {
+		if (e.keyCode == 87 || e.keyCode == 83) {
+			dy1 = 0.0;
+		}
+		else if (e.keyCode == 38 || e.keyCode == 40) {
+			dy2 = 0.0;
+		}
+	})
+
+	canvas.addEventListener('mousemove', function (e) {
+		if (!STOPPED) {
+			return engine.mousePosition(e);
+		}
+	});
+
+	// use XML HTTP request to grab data from the server (central)
+
+	let xmlhttp = new XMLHttpRequest()
+	xmlhttp.onreadystatechange = function () {
+		if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+			let responseText = xmlhttp.responseText
+			dy1 = parseFloat(JSON.parse(responseText).id0.dir);
+			dy2 = parseFloat(JSON.parse(responseText).id1.dir);
+		}
+	}
+
+	// periodically grab data
+	let getData = () => {
+		xmlhttp.open("POST", SERVERADDRESS, true)
+		xmlhttp.setRequestHeader("Content-type", "application/json")
+		xmlhttp.send("")
+		setTimeout(() => {
+			getData()
+		}, 10)
+	}
+
+
+	getData()
+
+
+</script>
+
+</html>
